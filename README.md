@@ -21,6 +21,7 @@ The dashboard stores layout, selected symbols, hidden widgets, theme, and appear
 - Live stock watchlist with search and removable tracked symbols.
 - Default fresh-install watchlist using broad popular market symbols.
 - Header quote summary with regular and extended-hours prices.
+- Left-side contextual market-news feed with manual and five-minute live refresh, infinite older-story loading, and secure new-tab article links.
 - Draggable and resizable Gridstack dashboard widgets.
 - Chart.js visualizations for hour, day, month, year, and all-time ranges.
 - Theme families for Samsung OneUI, Apple Liquid Glass, Cisco Momentum, Windows Fluent, Google Material, and IBM Carbon.
@@ -29,11 +30,12 @@ The dashboard stores layout, selected symbols, hidden widgets, theme, and appear
 
 ## Data Source
 
-Stock data is fetched directly from Yahoo Finance endpoints declared in `manifest.json`:
+Stock data and the freshest ticker headlines are fetched from Yahoo Finance. Older headline history and matching archive thumbnails are loaded on demand from Google News. Both public hosts are declared in `manifest.json`:
 
 ```json
 "host_permissions": [
-  "https://query1.finance.yahoo.com/*"
+  "https://query1.finance.yahoo.com/*",
+  "https://news.google.com/*"
 ]
 ```
 
@@ -47,6 +49,7 @@ Useful checks:
 
 ```bash
 node --test test/extended-hours.test.js
+node --test test/news-feed.test.js
 node --test test/package-release.test.js
 node --check js/app.js
 ```
