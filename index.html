@@ -99,6 +99,23 @@
   </div>
 </header>
 
+<div class="dashboard-shell" id="dashboard-shell">
+<aside class="news-sidebar card" id="news-sidebar" aria-labelledby="news-heading">
+  <div class="news-header">
+    <div>
+      <span class="news-eyebrow">Market news &middot; Live 5m</span>
+      <h2 id="news-heading">Latest for <span id="news-symbol">NVDA</span></h2>
+    </div>
+    <button id="news-refresh-btn" class="news-refresh-btn" type="button" aria-label="Refresh news feed" aria-controls="news-feed" aria-busy="false">Refresh Feed</button>
+  </div>
+  <div class="news-feed" id="news-feed" aria-live="polite" aria-busy="true">
+    <div class="news-card news-card-skeleton"><span class="skel news-thumb-skeleton"></span><span class="news-copy-skeleton"><span class="skel"></span><span class="skel"></span><span class="skel"></span></span></div>
+    <div class="news-card news-card-skeleton"><span class="skel news-thumb-skeleton"></span><span class="news-copy-skeleton"><span class="skel"></span><span class="skel"></span><span class="skel"></span></span></div>
+    <div class="news-card news-card-skeleton"><span class="skel news-thumb-skeleton"></span><span class="news-copy-skeleton"><span class="skel"></span><span class="skel"></span><span class="skel"></span></span></div>
+    <div class="news-card news-card-skeleton"><span class="skel news-thumb-skeleton"></span><span class="news-copy-skeleton"><span class="skel"></span><span class="skel"></span><span class="skel"></span></span></div>
+  </div>
+</aside>
+
 <!-- ── Dashboard: draggable/resizable Gridstack ────── -->
 <main class="grid-stack" id="dashboard-grid">
 
@@ -158,6 +175,7 @@
   </div>
 
 </main>
+</div>
 
 <script src="js/chart.umd.min.js"></script>
 <script src="js/gridstack.min.js"></script>

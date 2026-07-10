@@ -13,7 +13,8 @@
   },
   "permissions": [],
   "host_permissions": [
-    "https://query1.finance.yahoo.com/*"
+    "https://query1.finance.yahoo.com/*",
+    "https://news.google.com/*"
   ],
   "web_accessible_resources": [{
     "resources": ["css/gridstack.min.css", "js/gridstack.min.js"],
