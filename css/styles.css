@@ -654,15 +654,11 @@ header {
   border-left: 1px solid var(--border);
 }
 
-.hdr-ticker {
+.hdr-controls {
+  gap: 6px;
   margin-left: auto;
 }
 
-.hdr-controls {
-  gap: 6px;
-}
-
-.reset-layout-btn,
 .icon-btn {
   width: 32px;
   height: 32px;
@@ -682,13 +678,42 @@ header {
   transition: color .2s, border-color .2s, background .2s;
 }
 
-.reset-layout-btn:hover,
 .icon-btn:hover,
-.reset-layout-btn:focus-visible,
 .icon-btn:focus-visible {
   color: var(--accent);
   border-color: var(--accent);
   outline: none;
+}
+
+.header-control-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.rainbow-flower-icon {
+  width: 21px;
+  height: 21px;
+  overflow: visible;
+}
+
+.rainbow-petal {
+  stroke: rgba(0, 0, 0, .18);
+  stroke-width: .45;
+}
+
+.rainbow-red { fill: #ef4444; }
+.rainbow-orange { fill: #f97316; }
+.rainbow-yellow { fill: #facc15; }
+.rainbow-green { fill: #22c55e; }
+.rainbow-blue { fill: #3b82f6; }
+.rainbow-indigo { fill: #4f46e5; }
+.rainbow-violet { fill: #a855f7; }
+
+.rainbow-flower-center {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 1;
 }
 
 .theme-menu-wrap,
@@ -807,6 +832,16 @@ header {
   color: var(--text);
   font-size: 12px;
   opacity: .7;
+}
+
+.widget-menu-footer {
+  border-top: 1px solid var(--border);
+  padding: 5px 0;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.widget-menu .widget-menu-footer button {
+  font-weight: 700;
 }
 
 /* ── Ticker combo (searchable) ───────────────── */
@@ -1343,7 +1378,6 @@ body.theme-fluent .stat-pill {
 }
 
 body.theme-fluent .ticker-btn,
-body.theme-fluent .reset-layout-btn,
 body.theme-fluent .icon-btn {
   border-radius: 4px;
 }
@@ -1373,7 +1407,6 @@ body.theme-material .stat-pill {
 }
 
 body.theme-material .ticker-btn,
-body.theme-material .reset-layout-btn,
 body.theme-material .icon-btn {
   border-radius: 20px;
   border-color: var(--border);
@@ -1438,7 +1471,6 @@ body.theme-carbon .card-header h2 {
 }
 
 body.theme-carbon .ticker-btn,
-body.theme-carbon .reset-layout-btn,
 body.theme-carbon .icon-btn {
   border-radius: 0;
 }
@@ -1581,7 +1613,6 @@ body.theme-carbon.mode-light .stat-pill.stat-prior {
 @media (max-width: 860px) {
   header { flex-wrap: wrap; gap: 10px; padding: 10px 16px; }
   .hdr-ticker, .hdr-price, .hdr-controls, .hdr-meta { border-left: none; padding-left: 0; }
-  .hdr-ticker { margin-left: 0; }
   .card-header {
     align-items: flex-start;
     flex-wrap: wrap;

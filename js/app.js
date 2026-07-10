@@ -1695,17 +1695,27 @@ function buildGridOptions(args) {
   };
 }
 
+function buildWidgetMenuHtml(closed) {
+  closed = Array.isArray(closed) ? closed : [];
+  var widgetItems = closed.map(function(widget) {
+    return '<button type="button" data-widget-id="' + esc(widget.id) + '">' + esc(widget.title) + '</button>';
+  }).join('');
+  if (!widgetItems) widgetItems = '<div class="widget-menu-empty">All widgets are shown</div>';
+  return '<div class="widget-menu-items">' + widgetItems + '</div>' +
+    '<div class="widget-menu-footer"><button type="button" data-widget-action="reset-grid" role="menuitem">Reset Grid</button></div>';
+}
+
 function renderWidgetMenu() {
   var menu = $('widget-menu');
   if (!menu) return;
-  var closed = getClosedWidgetOptions(loadClosedWidgetIds());
-  if (!closed.length) {
-    menu.innerHTML = '<div class="widget-menu-empty">All widgets are shown</div>';
-    return;
-  }
-  menu.innerHTML = closed.map(function(widget) {
-    return '<button type="button" data-widget-id="' + esc(widget.id) + '">' + esc(widget.title) + '</button>';
-  }).join('');
+  menu.innerHTML = buildWidgetMenuHtml(getClosedWidgetOptions(loadClosedWidgetIds()));
+}
+
+function resetDashboardLayout(storage, reload) {
+  var targetStorage = storage || localStorage;
+  targetStorage.removeItem(GRID_STORAGE_KEY);
+  targetStorage.removeItem(CLOSED_WIDGETS_STORAGE_KEY);
+  (reload || function() { location.reload(); })();
 }
 
 function chooseDropdownMenuDirection(metrics) {
@@ -1868,6 +1878,12 @@ function initWidgetControls() {
   var menu = $('widget-menu');
   if (menu) {
     menu.addEventListener('click', function(e) {
+      var action = e.target.closest('[data-widget-action]');
+      if (action && action.dataset.widgetAction === 'reset-grid') {
+        setWidgetMenuOpen(false);
+        resetDashboardLayout();
+        return;
+      }
       var item = e.target.closest('[data-widget-id]');
       if (!item) return;
       addWidget(item.dataset.widgetId);
@@ -2115,15 +2131,6 @@ document.addEventListener('DOMContentLoaded', function() {
   initDashboardGrid();
   document.body.style.background = '';
 
-  var resetBtn = $('reset-layout-btn');
-  if (resetBtn) {
-    resetBtn.addEventListener('click', function() {
-      localStorage.removeItem(GRID_STORAGE_KEY);
-      localStorage.removeItem(CLOSED_WIDGETS_STORAGE_KEY);
-      location.reload();
-    });
-  }
-
   document.addEventListener('click', function(e) {
     if (!e.target.closest('#theme-menu-wrap')) setThemeMenuOpen(false);
     if (!e.target.closest('#widget-menu-wrap')) setWidgetMenuOpen(false);
@@ -2153,6 +2160,7 @@ if (typeof module !== 'undefined' && module.exports) {
     },
     allowGridInsertionOverflow: allowGridInsertionOverflow,
     buildBalancedWidgetLayout: buildBalancedWidgetLayout,
+    buildWidgetMenuHtml: buildWidgetMenuHtml,
     buildGridOptions: buildGridOptions,
     buildIntradayDatasets: buildIntradayDatasets,
     buildStatsHtml: buildStatsHtml,
@@ -2179,6 +2187,7 @@ if (typeof module !== 'undefined' && module.exports) {
     loadClosedWidgetIds: loadClosedWidgetIds,
     rebalanceOpenGridWidgets: rebalanceOpenGridWidgets,
     removeTickerFromList: removeTickerFromList,
+    resetDashboardLayout: resetDashboardLayout,
     resolveAppearanceMode: resolveAppearanceMode,
     resolveThemeId: resolveThemeId,
     saveClosedWidgetIds: saveClosedWidgetIds,

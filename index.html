@@ -47,11 +47,6 @@
     </svg>
     <h1>Rudolph</h1>
   </div>
-  <div class="hdr-meta">
-    <span><span class="live-dot"></span>&nbsp; Live</span>
-    <span id="clock"></span>
-  </div>
-
   <div class="hdr-ticker">
     <div class="ticker-combo" id="ticker-combo">
       <button class="ticker-btn" id="ticker-btn" type="button">NVDA</button>
@@ -68,14 +63,22 @@
     <span class="stock-change" id="stock-change"><span class="skel skel-change"></span></span>
   </div>
 
+  <div class="hdr-meta">
+    <span><span class="live-dot"></span>&nbsp; Live</span>
+    <span id="clock"></span>
+  </div>
+
   <div class="hdr-controls">
-    <button id="reset-layout-btn" class="reset-layout-btn" type="button" title="Reset grid layout">&#x21BB;</button>
     <div class="widget-menu-wrap" id="widget-menu-wrap">
-      <button id="add-widget-btn" class="icon-btn" type="button" title="Add widget" aria-label="Add widget">+</button>
-      <div class="widget-menu" id="widget-menu"></div>
+      <button id="add-widget-btn" class="icon-btn" type="button" title="Grid" aria-label="Grid options">
+        <svg class="header-control-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </button>
+      <div class="widget-menu" id="widget-menu" role="menu"></div>
     </div>
     <div class="theme-menu-wrap" id="theme-menu-wrap">
-      <button id="theme-menu-btn" class="icon-btn" type="button" title="Theme" aria-label="Theme">&#9881;</button>
+      <button id="theme-menu-btn" class="icon-btn" type="button" title="Theme" aria-label="Theme">
+        <svg class="header-control-icon rainbow-flower-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ellipse class="rainbow-petal rainbow-red" cx="12" cy="6.5" rx="2.6" ry="4.2"/><ellipse class="rainbow-petal rainbow-orange" cx="12" cy="6.5" rx="2.6" ry="4.2" transform="rotate(51.43 12 12)"/><ellipse class="rainbow-petal rainbow-yellow" cx="12" cy="6.5" rx="2.6" ry="4.2" transform="rotate(102.86 12 12)"/><ellipse class="rainbow-petal rainbow-green" cx="12" cy="6.5" rx="2.6" ry="4.2" transform="rotate(154.29 12 12)"/><ellipse class="rainbow-petal rainbow-blue" cx="12" cy="6.5" rx="2.6" ry="4.2" transform="rotate(205.71 12 12)"/><ellipse class="rainbow-petal rainbow-indigo" cx="12" cy="6.5" rx="2.6" ry="4.2" transform="rotate(257.14 12 12)"/><ellipse class="rainbow-petal rainbow-violet" cx="12" cy="6.5" rx="2.6" ry="4.2" transform="rotate(308.57 12 12)"/><circle class="rainbow-flower-center" cx="12" cy="12" r="2.8"/></svg>
+      </button>
       <div class="theme-menu" id="theme-menu" role="menu">
         <button type="button" data-theme="oneui" role="menuitemradio">Samsung OneUI</button>
         <button type="button" data-theme="glass" role="menuitemradio">Apple Liquid Glass</button>
