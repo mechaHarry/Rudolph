@@ -1,5 +1,11 @@
 # Rudolph
 
+<p align="center">
+  <img src="screenshots/rudolph-dashboard.png" alt="Rudolph market dashboard showing a live Apple quote, contextual news feed, and interactive charts" width="100%">
+</p>
+
+<p align="center"><em>A fast, customizable market dashboard for every new tab.</em></p>
+
 ## Install Locally For Development
 
 1. Open Chrome and go to `chrome://extensions`.
