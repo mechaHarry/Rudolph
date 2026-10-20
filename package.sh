@@ -85,6 +85,7 @@ include_paths = [
     "css/gridstack.min.css",
     "css/styles.css",
     "js/app.js",
+    "js/theme-bootstrap.js",
     "js/chart.umd.min.js",
     "js/gridstack.min.js",
     "icons/icon16.png",
