@@ -20,13 +20,14 @@ After editing files, return to `chrome://extensions` and click the reload button
 
 Rudolph is a customizable Chrome new-tab dashboard for tracking market symbols. It shows live quote data, after-hours movement, and draggable chart widgets for intraday, monthly, yearly, and all-time views.
 
-The dashboard stores layout, selected symbols, hidden widgets, theme, and appearance preferences locally in the browser. It does not require a backend service.
+The dashboard stores layout, selected symbols, hidden widgets, theme, and appearance preferences locally in the browser. It reads bookmarks through Chrome's built-in Bookmarks API and does not require a backend service.
 
 ## Features
 
 - Live stock watchlist with search and removable tracked symbols.
 - Default fresh-install watchlist using broad popular market symbols.
 - Header quote summary with regular and extended-hours prices.
+- Header Bookmarks button with an overlay menu for Chrome bookmarks and recursively nested folders.
 - Left-side contextual market-news feed with manual and five-minute live refresh, infinite older-story loading, and secure new-tab article links.
 - Draggable and resizable Gridstack dashboard widgets.
 - Chart.js visualizations for hour, day, month, year, and all-time ranges.
@@ -46,6 +47,8 @@ Stock data and the freshest ticker headlines are fetched from Yahoo Finance. Old
 ```
 
 The app includes graceful fallback behavior for chart and quote loading, and shows placeholders while data is still loading.
+
+The extension requests Chrome's `bookmarks` permission to display web bookmarks in the header menu. Bookmarks remain in Chrome; Rudolph does not send or persist them. Non-web URLs are omitted from the menu.
 
 ## Development
 

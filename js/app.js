@@ -2718,12 +2718,238 @@ function initDashboardGrid() {
   });
 }
 
+// ─── Header bookmarks menu ──────────────────────────
+var bookmarkRefreshTimer = null;
+var bookmarkRootNodes = [];
+var bookmarkRootFolder = { title: 'Bookmarks', children: [] };
+var bookmarkStatusMessage = 'Loading Chrome bookmarks…';
+var bookmarkMenuStack = [];
+var bookmarkMenuAnchor = null;
+var bookmarkMenuEl = null;
+
+function bookmarkWebUrl(value) {
+  if (typeof value !== 'string' || !value) return '';
+  try {
+    var parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function bookmarkEntries(nodes) {
+  return (nodes || []).filter(function(node) {
+    return node && (Array.isArray(node.children) || !!bookmarkWebUrl(node.url));
+  });
+}
+
+function positionBookmarkMenu() {
+  if (!bookmarkMenuEl || !bookmarkMenuAnchor || !bookmarkMenuEl.matches(':popover-open')) return;
+  var anchorRect = bookmarkMenuAnchor.getBoundingClientRect();
+  var menuRect = bookmarkMenuEl.getBoundingClientRect();
+  var left = Math.max(10, Math.min(anchorRect.left, window.innerWidth - menuRect.width - 10));
+  var top = anchorRect.bottom + 6;
+  if (top + menuRect.height > window.innerHeight - 10 && anchorRect.top > menuRect.height + 16) {
+    top = anchorRect.top - menuRect.height - 6;
+  }
+  bookmarkMenuEl.style.left = left + 'px';
+  bookmarkMenuEl.style.top = Math.max(10, Math.min(top, window.innerHeight - menuRect.height - 10)) + 'px';
+}
+
+function closeBookmarkMenu(restoreFocus) {
+  if (bookmarkMenuEl && bookmarkMenuEl.matches(':popover-open')) bookmarkMenuEl.hidePopover();
+  bookmarkMenuStack = [];
+  var anchor = bookmarkMenuAnchor;
+  bookmarkMenuAnchor = null;
+  if (anchor) anchor.setAttribute('aria-expanded', 'false');
+  if (restoreFocus && anchor && document.contains(anchor)) anchor.focus();
+}
+
+function focusBookmarkMenu() {
+  var firstItem = bookmarkMenuEl && bookmarkMenuEl.querySelector('.bookmark-menu-back, .bookmark-menu-item');
+  if (firstItem) firstItem.focus();
+}
+
+function renderBookmarkMenu() {
+  if (!bookmarkMenuEl || !bookmarkMenuStack.length) return;
+  bookmarkMenuEl.textContent = '';
+  var currentFolder = bookmarkMenuStack[bookmarkMenuStack.length - 1];
+  var header = document.createElement('div');
+  header.className = 'bookmark-menu-header';
+
+  if (bookmarkMenuStack.length > 1) {
+    var back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'bookmark-menu-back';
+    back.setAttribute('role', 'menuitem');
+    back.textContent = '‹ Back';
+    back.addEventListener('click', function() {
+      bookmarkMenuStack.pop();
+      renderBookmarkMenu();
+      focusBookmarkMenu();
+    });
+    header.appendChild(back);
+  }
+
+  var title = document.createElement('span');
+  title.className = 'bookmark-menu-title';
+  title.textContent = bookmarkMenuStack.map(function(folder) {
+    return folder.title || 'Untitled folder';
+  }).join(' › ');
+  header.appendChild(title);
+  bookmarkMenuEl.appendChild(header);
+
+  var items = document.createElement('div');
+  items.className = 'bookmark-menu-items';
+  var entries = bookmarkEntries(currentFolder.children);
+  entries.forEach(function(node) {
+    var label = node.title || (node.url ? bookmarkWebUrl(node.url) : 'Untitled folder');
+    if (Array.isArray(node.children)) {
+      var folderButton = document.createElement('button');
+      folderButton.type = 'button';
+      folderButton.className = 'bookmark-menu-item';
+      folderButton.setAttribute('role', 'menuitem');
+      var folderLabel = document.createElement('span');
+      folderLabel.className = 'bookmark-menu-item-label';
+      folderLabel.textContent = label;
+      var chevron = document.createElement('span');
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.textContent = '›';
+      folderButton.appendChild(folderLabel);
+      folderButton.appendChild(chevron);
+      folderButton.addEventListener('click', function() {
+        bookmarkMenuStack.push(node);
+        renderBookmarkMenu();
+        focusBookmarkMenu();
+      });
+      items.appendChild(folderButton);
+    } else {
+      var link = document.createElement('a');
+      link.className = 'bookmark-menu-item';
+      link.setAttribute('role', 'menuitem');
+      link.href = bookmarkWebUrl(node.url);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      var linkLabel = document.createElement('span');
+      linkLabel.className = 'bookmark-menu-item-label';
+      linkLabel.textContent = label;
+      link.appendChild(linkLabel);
+      link.addEventListener('click', function() { closeBookmarkMenu(false); });
+      items.appendChild(link);
+    }
+  });
+  if (!entries.length) {
+    var empty = document.createElement('span');
+    empty.className = 'bookmark-menu-empty';
+    empty.textContent = bookmarkStatusMessage || 'No web bookmarks in this folder';
+    items.appendChild(empty);
+  }
+  bookmarkMenuEl.appendChild(items);
+}
+
+function openBookmarkMenu(folder, anchor) {
+  if (!bookmarkMenuEl || typeof bookmarkMenuEl.showPopover !== 'function') return;
+  if (bookmarkMenuAnchor === anchor && bookmarkMenuEl.matches(':popover-open')) {
+    closeBookmarkMenu(false);
+    return;
+  }
+  if (bookmarkMenuAnchor && bookmarkMenuAnchor !== anchor) closeBookmarkMenu(false);
+  bookmarkMenuAnchor = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
+  bookmarkMenuStack = [folder];
+  renderBookmarkMenu();
+  if (!bookmarkMenuEl.matches(':popover-open')) bookmarkMenuEl.showPopover();
+  positionBookmarkMenu();
+  focusBookmarkMenu();
+}
+
+function showBookmarkMessage(message) {
+  bookmarkStatusMessage = message;
+  var button = $('bookmark-root-btn');
+  if (button) button.setAttribute('aria-busy', 'false');
+  if (bookmarkMenuStack.length) renderBookmarkMenu();
+}
+
+function loadChromeBookmarks() {
+  var button = $('bookmark-root-btn');
+  if (!button) return;
+
+  var api = typeof chrome !== 'undefined' && chrome.bookmarks;
+  if (!api || typeof api.getTree !== 'function') {
+    showBookmarkMessage('Chrome bookmarks are available in the installed extension');
+    return;
+  }
+
+  try {
+    api.getTree(function(tree) {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        showBookmarkMessage('Could not load Chrome bookmarks');
+        return;
+      }
+      bookmarkRootNodes = tree && tree[0] && Array.isArray(tree[0].children) ? tree[0].children : [];
+      bookmarkRootFolder.children = bookmarkRootNodes;
+      bookmarkStatusMessage = '';
+      button.setAttribute('aria-busy', 'false');
+      if (bookmarkMenuStack.length === 1 && bookmarkMenuStack[0] === bookmarkRootFolder) renderBookmarkMenu();
+      else closeBookmarkMenu(false);
+    });
+  } catch (e) {
+    showBookmarkMessage('Could not load Chrome bookmarks');
+  }
+}
+
+function scheduleBookmarkRefresh() {
+  clearTimeout(bookmarkRefreshTimer);
+  bookmarkRefreshTimer = setTimeout(loadChromeBookmarks, 120);
+}
+
+function initChromeBookmarks() {
+  var button = $('bookmark-root-btn');
+  if (!button) return;
+
+  bookmarkMenuEl = document.createElement('div');
+  bookmarkMenuEl.className = 'bookmark-menu';
+  bookmarkMenuEl.setAttribute('popover', 'manual');
+  bookmarkMenuEl.setAttribute('role', 'menu');
+  bookmarkMenuEl.setAttribute('aria-label', 'Chrome bookmark folders');
+  document.body.appendChild(bookmarkMenuEl);
+
+  button.addEventListener('click', function() { openBookmarkMenu(bookmarkRootFolder, button); });
+  window.addEventListener('resize', function() {
+    positionBookmarkMenu();
+  });
+  window.addEventListener('scroll', function(e) {
+    if (bookmarkMenuEl && bookmarkMenuEl.contains(e.target)) return;
+    closeBookmarkMenu(false);
+  }, true);
+  document.addEventListener('pointerdown', function(e) {
+    if (!bookmarkMenuStack.length || !bookmarkMenuEl) return;
+    if (bookmarkMenuEl.contains(e.target) || button.contains(e.target)) return;
+    closeBookmarkMenu(false);
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && bookmarkMenuStack.length) {
+      e.preventDefault();
+      closeBookmarkMenu(true);
+    }
+  });
+
+  loadChromeBookmarks();
+  var api = typeof chrome !== 'undefined' && chrome.bookmarks;
+  if (!api) return;
+  ['onCreated', 'onRemoved', 'onChanged', 'onMoved', 'onChildrenReordered', 'onImportEnded'].forEach(function(eventName) {
+    var event = api[eventName];
+    if (event && typeof event.addListener === 'function') event.addListener(scheduleBookmarkRefresh);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   applyThemeState(getStoredThemeFamily(), getStoredAppearancePreference());
   installSystemThemeListener();
   initThemeMenu();
   initWidgetControls();
   initNewsFeedControls();
+  initChromeBookmarks();
 
   initTickerCombo();
   initDashboardGrid();
