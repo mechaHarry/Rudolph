@@ -3,8 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const ts = require('typescript');
 
-function loadApp() {
+function loadApp(overrides = {}) {
   const elements = new Map();
   const document = {
     body: {
@@ -43,6 +44,7 @@ function loadApp() {
     },
     GridStack: { init: () => null },
     clearInterval: () => {},
+    clearTimeout: () => {},
     console,
     document,
     fetch: async () => ({ ok: false }),
@@ -70,16 +72,24 @@ function loadApp() {
     setTimeout: (cb) => { if (typeof cb === 'function') cb(); return 0; },
     window: { innerWidth: 1200, innerHeight: 800 }
   };
+  Object.assign(context, overrides);
+  context.AbortController = AbortController;
+  context.exports = context.module.exports;
+  context.require = (id) => {
+    if (id === 'chart.js/auto') return { default: context.Chart };
+    if (id === 'gridstack') return { GridStack: context.GridStack };
+    throw new Error('Unexpected runtime dependency: ' + id);
+  };
   context.global = context;
   vm.createContext(context);
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-  vm.runInContext(source, context, { filename: 'js/app.js' });
-  return context.module.exports;
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'legacy', 'dashboard.js'), 'utf8');
+  vm.runInContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context, { filename: 'src/legacy/dashboard.js' });
+  return context.module.exports.createDashboardRuntime();
 }
 
 function loadGridStackEngine() {
   global.self = global;
-  return require(path.join(__dirname, '..', 'js', 'gridstack.min.js')).Engine;
+  return require('gridstack/dist/gridstack-all.js').Engine;
 }
 
 function buildExpandedHourGrid(Engine, maxRow) {
@@ -770,4 +780,57 @@ test('glass theme avoids live backdrop blur on large chart cards', () => {
   assert.match(dark, /--card-blur:\s*none;/);
   assert.match(dark, /--hdr-blur:\s*blur\(24px\);/);
   assert.match(dark, /--menu-blur:\s*blur\(36px\) saturate\(180%\);/);
+});
+
+// Regression: React teardown and stalled bodies must release provider work.
+test('dashboard teardown aborts pending work and stalled response bodies have a deadline', async () => {
+  const timeouts = new Map();
+  let timerId = 0;
+  const fakeTimers = {
+    setTimeout: (callback) => { const id = ++timerId; timeouts.set(id, callback); return id; },
+    clearTimeout: (id) => timeouts.delete(id),
+  };
+  let requestCount = 0;
+  let requestSignal;
+  let finishRequest;
+  const app = loadApp({
+    ...fakeTimers,
+    fetch: (_url, options) => {
+      requestCount += 1;
+      requestSignal = options.signal;
+      return new Promise((resolve) => { finishRequest = resolve; });
+    }
+  });
+  assert.equal(requestCount, 0, 'importing the runtime does not start data work');
+  assert.equal(timeouts.size, 0, 'importing the runtime does not start timers');
+  const pending = app.fetchJsonWithBackoff('https://query1.finance.yahoo.com/chart', 2);
+  assert.equal(requestSignal.aborted, false);
+  app.destroy();
+  app.destroy();
+  assert.equal(requestSignal.aborted, true);
+  finishRequest({ ok: true, json: async () => ({ unsafeLateValue: true }) });
+  assert.equal(await pending, null);
+  assert.equal(await app.fetchJsonWithBackoff('https://query1.finance.yahoo.com/chart', 2), null);
+  assert.equal(requestCount, 1, 'teardown does not start retries or new requests');
+  assert.equal(timeouts.size, 0);
+
+  let bodyStarted = false;
+  const stalled = loadApp({
+    ...fakeTimers,
+    fetch: (_url, options) => ({
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        bodyStarted = true;
+        options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      }),
+    }),
+  });
+  const stalledBody = stalled.fetchJsonWithBackoff('https://query1.finance.yahoo.com/chart', 1);
+  await Promise.resolve();
+  assert.equal(bodyStarted, true);
+  assert.equal(timeouts.size, 1, 'deadline remains active while the body is being read');
+  timeouts.values().next().value();
+  assert.equal(await stalledBody, null);
+  assert.equal(timeouts.size, 0, 'completed work releases its deadline timer');
+  stalled.destroy();
 });

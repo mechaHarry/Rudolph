@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const ts = require('typescript');
 
 function loadApp() {
   const document = {
@@ -26,6 +27,7 @@ function loadApp() {
     GridStack: { init: () => null },
     URL,
     clearInterval: () => {},
+    clearTimeout: () => {},
     console,
     document,
     fetch: async () => ({ ok: false }),
@@ -38,14 +40,21 @@ function loadApp() {
     setTimeout: (callback) => { if (typeof callback === 'function') callback(); return 0; },
     window: { innerWidth: 1200, innerHeight: 800 }
   };
+  context.AbortController = AbortController;
+  context.exports = context.module.exports;
+  context.require = (id) => {
+    if (id === 'chart.js/auto') return { default: context.Chart };
+    if (id === 'gridstack') return { GridStack: context.GridStack };
+    throw new Error('Unexpected runtime dependency: ' + id);
+  };
   context.global = context;
   vm.createContext(context);
   vm.runInContext(
-    fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8'),
+    ts.transpileModule(fs.readFileSync(path.join(__dirname, '..', 'src', 'legacy', 'dashboard.js'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,
     context,
-    { filename: 'js/app.js' }
+    { filename: 'src/legacy/dashboard.js' }
   );
-  return context.module.exports;
+  return context.module.exports.createDashboardRuntime();
 }
 
 test('safeHttpsUrl permits only absolute HTTPS URLs', () => {
