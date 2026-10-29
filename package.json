@@ -1,14 +1,19 @@
 {
   "name": "rudolph",
-  "version": "1.1.8",
+  "version": "1.2.0",
   "private": true,
   "description": "A customizable market dashboard for every new tab.",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "check": "node --check js/app.js",
-    "test": "node --test test/*.test.js"
+    "dev": "wxt",
+    "dev:manual": "wxt --config wxt.manual.config.ts",
+    "build": "wxt build",
+    "zip": "bash package.sh",
+    "check": "tsc --noEmit",
+    "test": "node --test test/*.test.js",
+    "prepare": "wxt prepare"
   },
   "dependencies": {
     "chart.js": "4.6.1",

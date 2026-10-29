@@ -146,8 +146,8 @@ function crc32(buf) {
 }
 
 // Generate icons
-const iconsDir = path.join(__dirname, 'icons');
-if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir);
+const iconsDir = path.join(__dirname, 'public', 'icons');
+if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true });
 
 [16, 48, 128].forEach(function(size) {
   const png = createPNG(size);
@@ -156,4 +156,4 @@ if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir);
   console.log('Created ' + out + ' (' + png.length + ' bytes)');
 });
 
-console.log('Done! Icons generated in icons/');
+console.log('Done! Icons generated in public/icons/');

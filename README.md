@@ -1,81 +1,91 @@
 # Rudolph
 
 <p align="center">
-  <img src="screenshots/rudolph-dashboard.png" alt="Rudolph market dashboard showing a live Apple quote, contextual news feed, and interactive charts" width="100%">
+  <img src="screenshots/rudolph-dashboard.png" alt="Rudolph market dashboard with live quotes, contextual news, and interactive charts" width="100%">
 </p>
 
-<p align="center"><em>A fast, customizable market dashboard for every new tab.</em></p>
+A customizable market dashboard for every new tab, built with [WXT](https://wxt.dev), React, and TypeScript. Rudolph shows live quotes, extended-hours movement, contextual news, Chrome bookmarks, and movable, resizable chart widgets without a backend service.
 
-## Install Locally For Development
+## Bootstrap
 
-1. Open Chrome and go to `chrome://extensions`.
-2. Turn on `Developer mode`.
-3. Click `Load unpacked`.
-4. Select the cloned `rudolph` repository folder.
-5. Open a new tab. Chrome should load Rudolph as the new-tab page.
+Use Node.js 22.12 or newer and npm. Python 3 is needed only for the packaging and release scripts.
 
-After editing files, return to `chrome://extensions` and click the reload button on the Rudolph extension card, then open a new tab again.
+```bash
+npm ci
+npm run dev
+```
 
-## What Rudolph Is
+WXT prepares generated types during installation, builds a development extension, and opens a browser with hot reload. Its browser startup configuration includes `--disable-features=MacAppCodeSignClone` to avoid implicit clone storage buildup on macOS.
 
-Rudolph is a customizable Chrome new-tab dashboard for tracking market symbols. It shows live quote data, after-hours movement, and draggable chart widgets for intraday, monthly, yearly, and all-time views.
+For an existing browser profile or manual extension loading:
 
-The dashboard stores layout, selected symbols, hidden widgets, theme, and appearance preferences locally in the browser. It reads bookmarks through Chrome's built-in Bookmarks API and does not require a backend service.
+```bash
+npm run dev:manual
+```
+
+Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose `.output/chrome-mv3-dev`. Open a new tab. Keep the dev server running for hot reload.
+
+To use a production build:
+
+```bash
+npm run build
+```
+
+Load `.output/chrome-mv3` through **Load unpacked**. Reload the extension card after rebuilding. WXT generates the manifest and `newtab.html` in the output directory.
+
+## Architecture
+
+```text
+wxt.config.ts                  WXT, React module, browser startup, permissions
+package.json / package-lock.json  Versioned dependency and script definitions
+src/
+  entrypoints/newtab/           HTML entrypoint, React root, and App
+  components/                  Header, ThemeMenu, DashboardWorkspace/chart widgets
+  theme/                       Typed preferences and React ThemeProvider/useTheme
+  assets/styles.css            Existing theme tokens and dashboard styles
+  legacy/dashboard.js          Lifecycle adapter for data, charts, grid, and bookmarks
+public/icons/                  Static extension icons copied by WXT
+test/                          Existing behavior and packaging regressions
+```
+
+WXT uses its official `@wxt-dev/module-react` module and file-based new-tab entrypoint. Source modules and CSS are bundled locally; extension pages do not load executable code from a CDN. `public/` contains only static assets. Permissions are defined in `wxt.config.ts`; the generated manifest stays out of source control.
+
+React owns the page shell, reusable widget markup, theme controls, and appearance state. `ThemeProvider` preserves existing local preference keys, migrates previous light/dark preferences, follows system appearance in **Auto**, and synchronizes changes across open tabs. `ThemeMenu` uses controlled state and native buttons with pressed states, outside-click dismissal, and Escape/focus handling. Theme selection does not remount the dashboard or interrupt pending data requests.
+
+The existing chart, news, watchlist, bookmarks, and GridStack behaviors live in an explicit adapter while those features are migrated to React components incrementally. Stable memoized components give the adapter ownership of chart/news leaf content and widget positions. Each mount creates fresh runtime state; cleanup aborts requests, clears timers and animation frames, removes listeners, destroys charts and GridStack, and removes temporary tooltips and popovers. The adapter is loaded asynchronously after the shell renders; importing it starts no data loading or DOM work.
+
+Header, news, and chart skeletons reserve space while requests run independently. The page controls are available immediately, without waiting for an all-page loading overlay.
 
 ## Features
 
-- Live stock watchlist with search and removable tracked symbols.
-- Default fresh-install watchlist using broad popular market symbols.
-- Header quote summary with regular and extended-hours prices.
-- Header Bookmarks button with an overlay menu for Chrome bookmarks and recursively nested folders.
-- Left-side contextual market-news feed with manual and five-minute live refresh, infinite older-story loading, and secure new-tab article links.
-- Draggable and resizable Gridstack dashboard widgets.
-- Chart.js visualizations for hour, day, month, year, and all-time ranges.
-- Theme families for Samsung OneUI, Apple Liquid Glass, Cisco Momentum, Windows Fluent, Google Material, and IBM Carbon.
-- Independent appearance mode: `Auto`, `Light`, or `Dark`.
-- Auto appearance follows Chrome/system color settings where supported.
+- Live watchlist with search and removable tracked symbols.
+- Regular and extended-hours quote summaries and chart segments.
+- Hour, day, month, year, and all-time Chart.js views.
+- Draggable, resizable, hideable GridStack widgets with saved layouts.
+- Contextual news with manual and five-minute refresh and older-story loading.
+- Chrome bookmark menu with recursively nested folders.
+- Six existing theme families with independent **Auto**, **Light**, and **Dark** appearance controls.
 
-## Data Source
+## Data and privacy
 
-Stock data and the freshest ticker headlines are fetched from Yahoo Finance. Older headline history and matching archive thumbnails are loaded on demand from Google News. Both public hosts are declared in `manifest.json`:
+Quotes and fresh headlines come from Yahoo Finance; older headline history comes from Google News. Only their public hosts are granted access in `wxt.config.ts`. API requests retain bounded retries, exponential backoff with jitter, provider cooldowns, and `Retry-After` handling. Each request has a 15-second deadline covering its response body, polling jobs cannot overlap themselves, and per-provider response caches are bounded. Failed requests leave usable controls and unavailable states. The existing hourly demo fallback is retained and explicitly labels its synthetic quote as **demo**; it is not a live market quote.
 
-```json
-"host_permissions": [
-  "https://query1.finance.yahoo.com/*",
-  "https://news.google.com/*"
-]
-```
+The extension requests only the `bookmarks` permission. Bookmarks stay in Chrome and are neither transmitted nor persisted by Rudolph. External article and bookmark URLs are validated, and links opened in a new tab use `noopener noreferrer`. The old third-party CORS proxy fallback has been removed. Live data and bookmarks should be verified inside the extension; an ordinary HTTP preview lacks extension host permissions and the Chrome Bookmarks API.
 
-The app includes graceful fallback behavior for chart and quote loading, and shows placeholders while data is still loading.
+Layout, watchlist, theme, and appearance preferences remain in local browser storage. This repository is public and personal: keep private links, credentials, company-specific configuration, customer data, and personally identifiable information out of source and test fixtures.
 
-The extension requests Chrome's `bookmarks` permission to display web bookmarks in the header menu. Bookmarks remain in Chrome; Rudolph does not send or persist them. Non-web URLs are omitted from the menu.
-
-## Development
-
-This project is plain HTML, CSS, and JavaScript. There is no build step required for normal extension development.
-
-Useful checks:
+## Verification
 
 ```bash
-node --test test/extended-hours.test.js
-node --test test/news-feed.test.js
-node --test test/package-release.test.js
-node --check js/app.js
+npm run check
+npm test
+npm run build
+npm audit
 ```
 
-Useful local preview:
+The regression suite covers existing extended-hours calculations, provider backoff, saved layouts, URL/news handling, theme tokens, runtime disposal, and packaging. New regression tests focus on lifecycle cleanup and preventing source/private files from entering the extension ZIP.
 
-```bash
-python3 -m http.server 8765
-```
-
-Then open:
-
-```text
-http://127.0.0.1:8765/index.html
-```
-
-The extension entrypoint is `newtab.html`; `index.html` is useful for local browser preview.
+For a manual smoke test, load the production extension, switch theme families and appearance, reload a tab to check persistence, search/select a symbol, close and restore a chart, resize a widget, refresh news, and navigate a nested bookmark folder. The theme menu should work even when data is unavailable. For any Playwright browser simulation, pass `--disable-features=MacAppCodeSignClone` in browser launch arguments.
 
 ## Packaging
 
