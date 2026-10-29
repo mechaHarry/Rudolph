@@ -6,7 +6,7 @@ APP_NAME="Rudolph"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION_FILE="${ROOT_DIR}/VERSION"
 PACKAGE_PATH="${ROOT_DIR}/package.json"
-BUILD_DIR="${ROOT_DIR}/.output/chrome-mv3"
+BUILD_DIR="${ROOT_DIR}/build/chrome-mv3"
 DIST_DIR="${ROOT_DIR}/dist"
 
 usage() {

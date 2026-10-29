@@ -23,7 +23,7 @@ For an existing browser profile or manual extension loading:
 npm run dev:manual
 ```
 
-Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose `.output/chrome-mv3-dev`. Open a new tab. Keep the dev server running for hot reload.
+Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose `build/chrome-mv3-dev`. Open a new tab. Keep the dev server running for hot reload.
 
 To use a production build:
 
@@ -31,7 +31,7 @@ To use a production build:
 npm run build
 ```
 
-Load `.output/chrome-mv3` through **Load unpacked**. Reload the extension card after rebuilding. The repository root is no longer an installable extension; WXT generates the manifest and `newtab.html` in the output directory.
+Load `build/chrome-mv3` through **Load unpacked**. Reload the extension card after rebuilding. The repository root is no longer an installable extension; WXT generates the manifest and `newtab.html` in the output directory.
 
 ## Architecture
 
@@ -89,14 +89,14 @@ For a manual smoke test, load the production extension, switch theme families an
 
 ## Packaging and releases
 
-`VERSION` and `package.json` must contain the same semantic version. WXT derives the generated manifest version from `package.json`. Version **1.2.0** introduces the WXT/React foundation.
+`VERSION` and `package.json` must contain the same semantic version. WXT derives the generated manifest version from `package.json`. Version **1.2.0** introduces the WXT/React foundation; **1.2.1** places generated extensions in the visible `build/` directory for Chrome’s folder picker.
 
 ```bash
 npm run zip
 # dist/Rudolph-<version>-chrome-extension.zip
 ```
 
-`package.sh` builds the production extension, verifies all version values, and packages only `.output/chrome-mv3`. It rejects symlinks and atomically replaces the ZIP after validation.
+`package.sh` builds the production extension, verifies all version values, and packages only `build/chrome-mv3`. It rejects symlinks and atomically replaces the ZIP after validation.
 
 Preview the existing signed release process:
 
