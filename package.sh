@@ -5,14 +5,15 @@ APP_NAME="Rudolph"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION_FILE="${ROOT_DIR}/VERSION"
-MANIFEST_PATH="${ROOT_DIR}/manifest.json"
+PACKAGE_PATH="${ROOT_DIR}/package.json"
+BUILD_DIR="${ROOT_DIR}/.output/chrome-mv3"
 DIST_DIR="${ROOT_DIR}/dist"
 
 usage() {
   cat <<USAGE
 Usage: ./package.sh
 
-Creates one installable Chrome extension zip in ./dist.
+Builds the production WXT extension and creates one installable zip in ./dist.
 The zip has manifest.json at its root and is suitable for Chrome extension
 distribution or manual unzip/load testing.
 USAGE
@@ -48,64 +49,62 @@ read_version() {
   fi
 }
 
-manifest_version() {
-  python3 - "${MANIFEST_PATH}" <<'PY'
+verify_package_version() {
+  python3 - "${PACKAGE_PATH}" "${VERSION}" <<'PYTHON'
 import json
 import sys
 
 with open(sys.argv[1], encoding="utf-8") as handle:
-    print(json.load(handle)["version"])
-PY
-}
-
-verify_manifest_version() {
-  local version
-  version="$(manifest_version)"
-  if [[ "${version}" != "${VERSION}" ]]; then
-    echo "error: manifest.json version ${version} does not match VERSION ${VERSION}" >&2
-    exit 1
-  fi
+    version = json.load(handle)["version"]
+if version != sys.argv[2]:
+    raise SystemExit("error: package.json version does not match VERSION")
+PYTHON
 }
 
 package_extension() {
   ZIP_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-chrome-extension.zip"
 
   mkdir -p "${DIST_DIR}"
-  rm -f "${ZIP_PATH}"
 
-  python3 - "${ROOT_DIR}" "${ZIP_PATH}" <<'PY'
+  python3 - "${BUILD_DIR}" "${ZIP_PATH}" "${VERSION}" <<'PYTHON'
+import json
 import os
+from pathlib import Path
 import sys
+import tempfile
 import zipfile
 
-root, zip_path = sys.argv[1:3]
-include_paths = [
-    "manifest.json",
-    "newtab.html",
-    "css/gridstack.min.css",
-    "css/styles.css",
-    "js/app.js",
-    "js/theme-bootstrap.js",
-    "js/chart.umd.min.js",
-    "js/gridstack.min.js",
-    "icons/icon16.png",
-    "icons/icon48.png",
-    "icons/icon128.png",
-]
+build, zip_path, version = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+with (build / "manifest.json").open(encoding="utf-8") as handle:
+    manifest = json.load(handle)
+if manifest.get("version") != version:
+    raise SystemExit("error: generated manifest version does not match VERSION")
+entrypoint = manifest.get("chrome_url_overrides", {}).get("newtab")
+if not entrypoint or not (build / entrypoint).is_file():
+    raise SystemExit("error: generated extension is missing its new-tab entrypoint")
 
-missing = [path for path in include_paths if not os.path.isfile(os.path.join(root, path))]
-if missing:
-    raise SystemExit("missing extension files: " + ", ".join(missing))
-
-with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-    for rel_path in include_paths:
-        archive.write(os.path.join(root, rel_path), rel_path)
-PY
+# Package only generated extension assets; never include repository files or links.
+files = sorted(build.rglob("*"))
+if any(file.is_symlink() for file in files):
+    raise SystemExit("error: generated extension must not contain symbolic links")
+with tempfile.NamedTemporaryFile(dir=zip_path.parent, suffix=".zip", delete=False) as handle:
+    temp_path = Path(handle.name)
+try:
+    with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for file in files:
+            if file.is_file():
+                archive.write(file, file.relative_to(build).as_posix())
+    os.replace(temp_path, zip_path)
+finally:
+    temp_path.unlink(missing_ok=True)
+PYTHON
 
   echo "Created ${ZIP_PATH}"
 }
 
 require_command python3
+require_command npm
 read_version
-verify_manifest_version
+verify_package_version
+(cd "${ROOT_DIR}" && npm run build)
 package_extension

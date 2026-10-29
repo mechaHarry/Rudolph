@@ -31,7 +31,7 @@ To use a production build:
 npm run build
 ```
 
-Load `.output/chrome-mv3` through **Load unpacked**. Reload the extension card after rebuilding. WXT generates the manifest and `newtab.html` in the output directory.
+Load `.output/chrome-mv3` through **Load unpacked**. Reload the extension card after rebuilding. The repository root is no longer an installable extension; WXT generates the manifest and `newtab.html` in the output directory.
 
 ## Architecture
 
@@ -87,46 +87,21 @@ The regression suite covers existing extended-hours calculations, provider backo
 
 For a manual smoke test, load the production extension, switch theme families and appearance, reload a tab to check persistence, search/select a symbol, close and restore a chart, resize a widget, refresh news, and navigate a nested bookmark folder. The theme menu should work even when data is unavailable. For any Playwright browser simulation, pass `--disable-features=MacAppCodeSignClone` in browser launch arguments.
 
-## Packaging
+## Packaging and releases
 
-Semantic version tracking lives in `VERSION`, and `manifest.json` must use the same version.
-
-Create the Chrome extension package:
+`VERSION` and `package.json` must contain the same semantic version. WXT derives the generated manifest version from `package.json`. Version **1.2.0** introduces the WXT/React foundation.
 
 ```bash
-./package.sh
+npm run zip
+# dist/Rudolph-<version>-chrome-extension.zip
 ```
 
-This creates one installable extension zip in `dist/`, with `manifest.json` at the zip root:
+`package.sh` builds the production extension, verifies all version values, and packages only `.output/chrome-mv3`. It rejects symlinks and atomically replaces the ZIP after validation.
 
-```text
-dist/Rudolph-<version>-chrome-extension.zip
-```
-
-## Release
-
-Create a signed semantic version tag and publish a GitHub release:
-
-```bash
-GITHUB_TOKEN=... ./release.sh
-```
-
-The release script:
-
-- Reads `VERSION`.
-- Requires `manifest.json` to match `VERSION`.
-- Creates a signed tag named `v<VERSION>`.
-- Pushes the tag to `origin`.
-- Packages the extension.
-- Creates a GitHub release with generated release notes.
-- Uploads the single extension zip as the release asset.
-
-Preview without creating tags or releases:
+Preview the existing signed release process:
 
 ```bash
 ./release.sh --dry-run
 ```
 
-## Repository Notes
-
-This repository is intended to be public and personal. Avoid company-specific defaults, private links, private logic, or personally identifiable information in committed source.
+When publishing a release, provide `GITHUB_TOKEN` through your environment and run `./release.sh`. The script verifies semantic versions, creates and verifies a signed `v<VERSION>` tag, pushes it, and uploads the single extension ZIP to a GitHub release. A release publishes externally; local build, test, and packaging commands do not publish anything.

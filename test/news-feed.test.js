@@ -241,25 +241,18 @@ test('news refresh eligibility conserves work while hidden, recent, or in flight
   assert.equal(app.shouldRefreshNews({ lastFetchAt: 100, now: 100 + interval, interval }), true);
 });
 
-test('both extension entrypoints include the same accessible news sidebar', () => {
-  const index = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const newtab = fs.readFileSync(path.join(__dirname, '..', 'newtab.html'), 'utf8');
-  const sidebarPattern = /<div class="dashboard-shell"[\s\S]*?<\/aside>[\s\S]*?<main class="grid-stack"/;
-  const indexSidebar = index.match(sidebarPattern);
-  const newtabSidebar = newtab.match(sidebarPattern);
-
-  assert.ok(indexSidebar);
-  assert.ok(newtabSidebar);
-  assert.equal(indexSidebar[0], newtabSidebar[0]);
-  assert.match(index, /id="news-feed" aria-live="polite" aria-busy="true"/);
-  assert.match(index, /Market news &middot; Live 5m/);
-  assert.match(index, /id="news-refresh-btn" class="news-refresh-btn"[\s\S]*aria-controls="news-feed" aria-busy="false">Refresh Feed<\/button>/);
-  assert.doesNotMatch(index, /news-scroll-refresh|Pull down to refresh|Release to refresh/);
-  assert.doesNotMatch(index, /news-side-toggle|Move news sidebar/);
+test('React workspace preserves accessible news controls and initial skeletons', () => {
+  const workspace = fs.readFileSync(path.join(__dirname, '..', 'src', 'components', 'DashboardWorkspace.tsx'), 'utf8');
+  assert.match(workspace, /id="news-sidebar" aria-labelledby="news-heading"/);
+  assert.match(workspace, /id="news-feed" aria-live="polite" aria-busy="true"/);
+  assert.match(workspace, /id="news-refresh-btn"[\s\S]*aria-controls="news-feed" aria-busy="false">Refresh Feed<\/button>/);
+  assert.match(workspace, /news-card news-card-skeleton/);
+  assert.match(workspace, /className="skel skel-chart"/);
+  assert.doesNotMatch(workspace, /news-side-toggle|Move news sidebar/);
 });
 
 test('news sidebar CSS stays left and supports refresh, skeletons, and focus', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'styles.css'), 'utf8');
 
   assert.match(css, /\.dashboard-shell \.news-sidebar\s*\{ order: 0; \}/);
   assert.match(css, /\.dashboard-shell main\.grid-stack\s*\{ order: 1; \}/);
@@ -286,14 +279,14 @@ test('news sidebar CSS stays left and supports refresh, skeletons, and focus', (
 });
 
 test('refresh button reloads latest stories and bottom scrolling loads the RSS archive', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'legacy', 'dashboard.js'), 'utf8');
 
   assert.match(source, /function setNewsRefreshButtonLoading\(loading\)[\s\S]*button\.disabled = !!loading;[\s\S]*Refreshing…/);
-  assert.match(source, /refreshButton\.addEventListener\('click'[\s\S]*manualRefresh: true/);
+  assert.match(source, /listen\(refreshButton, 'click'[\s\S]*manualRefresh: true/);
   assert.match(source, /manualVisibleCount = options\.manualRefresh \? newsVisibleCount/);
   assert.match(source, /options\.manualRefresh \? \{[\s\S]*mergeExisting: true,[\s\S]*visibleCount: manualVisibleCount/);
   assert.match(source, /if \(manualFeed\) manualFeed\.scrollTop = manualScrollTop/);
-  assert.match(source, /feed\.addEventListener\('scroll',[\s\S]*loadMoreNewsIfNeeded\(feed\)/);
+  assert.match(source, /listen\(feed, 'scroll',[\s\S]*loadMoreNewsIfNeeded\(feed\)/);
   assert.match(source, /function appendVisibleNewsItems[\s\S]*append: true[\s\S]*previousDateKey/);
   assert.match(source, /feed\.insertBefore\(fragment, existingLoadMore\)/);
   assert.match(source, /function syncNewsLoadMoreButton[\s\S]*if \(!loadMore\)[\s\S]*feed\.appendChild\(loadMore\)/);
@@ -309,28 +302,14 @@ test('refresh button reloads latest stories and bottom scrolling loads the RSS a
   assert.doesNotMatch(source, /rudolph-news-sidebar-side|normalizeSidebarSide|applyNewsSidebarSide/);
 });
 
-test('header order and popup controls match the requested layout', () => {
-  const index = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const newtab = fs.readFileSync(path.join(__dirname, '..', 'newtab.html'), 'utf8');
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-
-  [index, newtab].forEach((html) => {
-    const header = html.match(/<header>[\s\S]*?<\/header>/)[0];
-    assert.ok(header.indexOf('class="brand"') < header.indexOf('class="hdr-ticker"'));
-    assert.ok(header.indexOf('class="hdr-ticker"') < header.indexOf('class="hdr-price"'));
-    assert.ok(header.indexOf('class="hdr-price"') < header.indexOf('class="hdr-meta"'));
-    assert.ok(header.indexOf('class="hdr-meta"') < header.indexOf('class="hdr-controls"'));
-    assert.match(header, /id="add-widget-btn"[\s\S]*aria-label="Grid options"[\s\S]*<rect[^>]*>[\s\S]*<rect[^>]*>[\s\S]*<rect[^>]*>[\s\S]*<rect/);
-    assert.match(header, /id="theme-menu-btn"[\s\S]*class="header-control-icon rainbow-flower-icon"[\s\S]*rainbow-red[\s\S]*rainbow-orange[\s\S]*rainbow-yellow[\s\S]*rainbow-green[\s\S]*rainbow-blue[\s\S]*rainbow-indigo[\s\S]*rainbow-violet/);
-    const flower = header.match(/<svg class="header-control-icon rainbow-flower-icon"[\s\S]*?<\/svg>/)[0];
-    assert.match(flower, /aria-hidden="true" focusable="false"/);
-    assert.equal((flower.match(/class="rainbow-petal /g) || []).length, 7);
-    assert.doesNotMatch(header, /paintbrush-icon|paintbrush-paint|paint-bucket-icon|paint-bucket-drop/);
-    assert.doesNotMatch(header, /reset-layout-btn|>\+<|&#9881;/);
-  });
-  assert.match(source, /widget-menu-footer[\s\S]*data-widget-action="reset-grid"[\s\S]*Reset Grid/);
-  assert.match(source, /function resetDashboardLayout\(storage, reload\)[\s\S]*removeItem\(GRID_STORAGE_KEY\)[\s\S]*removeItem\(CLOSED_WIDGETS_STORAGE_KEY\)/);
-  assert.match(source, /action\.dataset\.widgetAction === 'reset-grid'[\s\S]*resetDashboardLayout\(\)/);
+test('React header preserves control order and delegates theme behavior', () => {
+  const header = fs.readFileSync(path.join(__dirname, '..', 'src', 'components', 'Header.tsx'), 'utf8');
+  assert.ok(header.indexOf('className="brand"') < header.indexOf('className="hdr-ticker"'));
+  assert.ok(header.indexOf('className="hdr-ticker"') < header.indexOf('className="hdr-price"'));
+  assert.ok(header.indexOf('className="hdr-price"') < header.indexOf('className="hdr-meta"'));
+  assert.ok(header.indexOf('className="hdr-meta"') < header.indexOf('className="hdr-controls"'));
+  assert.match(header, /id="add-widget-btn"[\s\S]*aria-label="Grid options"/);
+  assert.match(header, /<ThemeMenu \/>/);
 });
 
 test('grid popup always ends with Reset Grid and reset clears both layout keys', () => {
@@ -349,7 +328,7 @@ test('grid popup always ends with Reset Grid and reset clears both layout keys',
 });
 
 test('missing and failed thumbnails use the matte Rudolph placeholder', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'legacy', 'dashboard.js'), 'utf8');
 
   assert.match(source, /function createNewsThumbnailPlaceholder\(\)/);
   assert.match(source, /placeholder\.className = 'news-thumbnail news-thumbnail-placeholder'/);
@@ -358,15 +337,16 @@ test('missing and failed thumbnails use the matte Rudolph placeholder', () => {
 });
 
 test('news polling is five-minute and skips work while the page is hidden', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'legacy', 'dashboard.js'), 'utf8');
 
   assert.match(source, /NEWS_REFRESH_MS = 5 \* 60 \* 1000/);
   assert.match(source, /hidden:\s*document\.hidden/);
   assert.match(source, /newsCount=' \+ NEWS_PAGE_SIZE/);
 });
 
-test('manifest grants only the archive host needed for older stories', () => {
-  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'manifest.json'), 'utf8'));
-
-  assert.ok(manifest.host_permissions.includes('https://news.google.com/*'));
+test('WXT manifest retains explicit news and quote hosts without broad access', () => {
+  const config = fs.readFileSync(path.join(__dirname, '..', 'wxt.config.ts'), 'utf8');
+  assert.match(config, /https:\/\/news\.google\.com\/\*/);
+  assert.match(config, /https:\/\/query1\.finance\.yahoo\.com\/\*/);
+  assert.doesNotMatch(config, /<all_urls>|corsproxy/);
 });

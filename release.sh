@@ -27,6 +27,7 @@ Required for release:
   - git tag signing configured for 'git tag -s'
   - curl
   - python3
+  - npm dependencies installed with npm ci
 
 Environment:
   REMOTE          Git remote to release from. Default: origin
@@ -91,6 +92,20 @@ read_version() {
   VERSION="$(tr -d '[:space:]' < "${VERSION_FILE}")"
   if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "error: VERSION must contain a semver in MAJOR.MINOR.PATCH form" >&2
+    exit 1
+  fi
+
+  local package_version
+  package_version="$(python3 - "${ROOT_DIR}/package.json" <<'PYTHON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    print(json.load(handle)["version"])
+PYTHON
+)"
+  if [[ "${package_version}" != "${VERSION}" ]]; then
+    echo "error: package.json version ${package_version} does not match VERSION ${VERSION}" >&2
     exit 1
   fi
 
@@ -243,7 +258,7 @@ ensure_release_does_not_exist() {
   if api_curl "${API_ROOT}/repos/${OWNER}/${REPO}/releases/tags/${TAG_NAME}" >/tmp/rudolph-existing-release.json 2>/dev/null; then
     existing_release_url="$(python3 -c 'import json, sys; print(json.load(sys.stdin)["html_url"])' </tmp/rudolph-existing-release.json)"
     echo "error: release ${TAG_NAME} already exists: ${existing_release_url}" >&2
-    echo "Bump VERSION and manifest.json, then release a new tag." >&2
+    echo "Bump VERSION and package.json, then release a new tag." >&2
     exit 1
   fi
 }

@@ -690,18 +690,14 @@ test('dropdown menus choose the side with less clipping when neither side fully 
   }), 'right');
 });
 
-test('theme menu labels the webex family as Cisco Momentum', () => {
-  const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-  const newtabHtml = fs.readFileSync(path.join(__dirname, '..', 'newtab.html'), 'utf8');
-
-  assert.match(indexHtml, /data-theme="webex"[^>]*>Cisco Momentum<\/button>/);
-  assert.match(newtabHtml, /data-theme="webex"[^>]*>Cisco Momentum<\/button>/);
-  assert.doesNotMatch(indexHtml, /Cisco Webex/);
-  assert.doesNotMatch(newtabHtml, /Cisco Webex/);
+test('theme family preserves the Momentum display name', () => {
+  const preferences = fs.readFileSync(path.join(__dirname, '..', 'src', 'theme', 'preferences.ts'), 'utf8');
+  assert.match(preferences, /webex: 'Cisco Momentum'/);
+  assert.doesNotMatch(preferences, /Cisco Webex/);
 });
 
 test('webex theme CSS uses Momentum stable token values', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'styles.css'), 'utf8');
 
   assert.match(css, /Cisco Momentum/);
   assert.match(css, /body\.theme-webex\s*\{[\s\S]*--bg:\s*#000000;/);
@@ -719,7 +715,7 @@ test('webex theme CSS uses Momentum stable token values', () => {
 });
 
 test('carbon theme CSS uses IBM Carbon theme tokens and flat layers', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'styles.css'), 'utf8');
 
   assert.match(css, /getdesign\.md\/ibm\/design-md/);
   assert.match(css, /body\.theme-carbon\s*\{[\s\S]*--bg:\s*#161616;/);
@@ -739,7 +735,7 @@ test('carbon theme CSS uses IBM Carbon theme tokens and flat layers', () => {
 });
 
 test('glass theme CSS uses Apple Liquid Glass references and system colors', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'styles.css'), 'utf8');
   const dark = cssRuleBlock(css, 'body.theme-glass');
   const light = cssRuleBlock(css, 'body.theme-glass.mode-light');
 
@@ -761,7 +757,7 @@ test('glass theme CSS uses Apple Liquid Glass references and system colors', () 
 });
 
 test('glass theme gives dropdowns a dense blurred Liquid Glass surface', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'styles.css'), 'utf8');
   const dark = cssRuleBlock(css, 'body.theme-glass');
 
   assert.match(dark, /--menu-bg:\s*linear-gradient\(175deg, rgba\(44,38,74,\.92\) 0%, rgba\(31,28,58,\.86\) 100%\);/);
@@ -774,7 +770,7 @@ test('glass theme gives dropdowns a dense blurred Liquid Glass surface', () => {
 });
 
 test('glass theme avoids live backdrop blur on large chart cards', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'styles.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets', 'styles.css'), 'utf8');
   const dark = cssRuleBlock(css, 'body.theme-glass');
 
   assert.match(dark, /--card-blur:\s*none;/);
